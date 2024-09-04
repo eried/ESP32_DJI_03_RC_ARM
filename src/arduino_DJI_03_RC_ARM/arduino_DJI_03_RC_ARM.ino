@@ -24,23 +24,26 @@ MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE
 COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR 
 CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 ************************************************************************************/
+#include <HardwareSerial.h>
+
 
 #include "MSP.h"
 #include "MSP_OSD.h"
 #include "OSD_positions_config.h"
 
-#define ANALOG_IN                A0    // Voltage Read pin (notice this is now Pin 0, instead of Pin 1)
-#define VOLT_DIVIDER             48    // Set to 1024/full scale voltage
-//#define DEBUG                          //uncomment to see diagnostics from USB serial
+#define ANALOG_IN 4       // Voltage Read pin
+#define LED_BUILTIN 2
+#define DEBUG  //uncomment to see diagnostics from USB serial
 
-#define FC_FIRMWARE_NAME          "Betaflight"
-#define FC_FIRMWARE_IDENTIFIER    "BTFL"
+#define FC_FIRMWARE_NAME "Betaflight"
+#define FC_FIRMWARE_IDENTIFIER "BTFL"
 
+//HardwareSerial Serial1(2); // use UART2
 HardwareSerial &mspSerial = Serial1;
 MSP msp;
 
 // Arm Logic
-uint32_t unarmedMillis = 3000;   // number of milliseconds to wait before arming, after AU is initialized. Recommend at least 3000 (3 seconds).
+uint32_t unarmedMillis = 3000;  // number of milliseconds to wait before arming, after AU is initialized. Recommend at least 3000 (3 seconds).
 
 //Voltage and Battery Reading
 float averageVoltage = 0;
@@ -77,17 +80,17 @@ msp_status_DJI_t status_DJI = { 0 };
 msp_analog_t analog = { 0 };
 
 void setup() {
-  #ifdef DEBUG
-    SerialUSB.begin(115200);
-    //while (!SerialUSB);
-  #endif
-  Serial1.begin(115200);
-  while (!Serial1);
+#ifdef DEBUG
+  Serial.begin(115200);
 
-  analogReadResolution(12); // SAMD21 12 bit resolution 0 - 4096 range on Analog pin
+#endif
+  Serial1.begin(115200, SERIAL_8N1, 16, 18); 
+  while (!Serial1)
+    ;
 
   msp.begin(mspSerial);
   pinMode(LED_BUILTIN, OUTPUT);
+  analogWrite(LED_BUILTIN, 5);
 
   delay(1000);
 
@@ -101,32 +104,32 @@ void setup() {
   status_DJI.djiPackArmingDisabledFlags = (1 << 24);
   flightModeFlags = 0x00000002;
 
-  #ifdef DEBUG
-    Serial.println("Initialized");
-  #endif
+#ifdef DEBUG
+  Serial.println("Initialized");
+#endif
 }
 
-void loop() { 
-   
+void loop() {
+
 
   if (!activityDetected) {
-    #ifdef DEBUG
-      Serial.println("Waiting for AU...");
-    #endif
-    digitalWrite(LED_BUILTIN, LOW);
+#ifdef DEBUG
+    Serial.println("Waiting for AU...");
+#endif
+    analogWrite(LED_BUILTIN, 10);
 
     // Wait for Air Unit to send data
-    while(!msp.activityDetected()) {    
+    while (!msp.activityDetected()) {
     };
     activityDetected = true;
-    activityDetectedMillis_MSP = millis();    
-    #ifdef DEBUG
-      Serial.println("AU Detected, waiting (unarmedMillis) time till arm");
-    #endif
+    activityDetectedMillis_MSP = millis();
+#ifdef DEBUG
+    Serial.println("AU Detected, waiting (unarmedMillis) time till arm");
+#endif
   }
 
-  digitalWrite(LED_BUILTIN, HIGH);
-  
+  analogWrite(LED_BUILTIN, 255);
+
   uint32_t currentMillis_MSP = millis();
 
   if ((uint32_t)(currentMillis_MSP - previousMillis_MSP) >= next_interval_MSP) {
@@ -135,9 +138,9 @@ void loop() {
     if (general_counter % 300 == 0) {  // update the altitude and voltage values every 300ms
       getVoltageSample();
       if (lightOn) {
-        digitalWrite(LED_BUILTIN, LOW);
+        analogWrite(LED_BUILTIN, 0);
       } else {
-        digitalWrite(LED_BUILTIN, HIGH);
+        analogWrite(LED_BUILTIN, 255);
       }
       lightOn = !lightOn;
     }
@@ -149,7 +152,7 @@ void loop() {
     }
 
 #ifdef DEBUG
-    //debugPrint();
+    debugPrint();
 #endif
     send_msp_to_airunit();
     general_counter += next_interval_MSP;
@@ -256,17 +259,17 @@ void invert_pos(uint16_t *pos1, uint16_t *pos2) {
 }
 
 void set_flight_mode_flags(bool arm) {
-    if ((flightModeFlags == 0x00000002) && arm) {
-      flightModeFlags = 0x00000003;    // arm
-      #ifdef DEBUG
-        Serial.println("ARMING");
-      #endif
-    } else if ((flightModeFlags == 0x00000003) && !arm) {        
-      flightModeFlags = 0x00000002;    // disarm 
-      #ifdef DEBUG
-        Serial.println("DISARMING");
-      #endif
-    }
+  if ((flightModeFlags == 0x00000002) && arm) {
+    flightModeFlags = 0x00000003;  // arm
+#ifdef DEBUG
+    Serial.println("ARMING");
+#endif
+  } else if ((flightModeFlags == 0x00000003) && !arm) {
+    flightModeFlags = 0x00000002;  // disarm
+#ifdef DEBUG
+    Serial.println("DISARMING");
+#endif
+  }
 }
 
 void display_flight_mode() {
@@ -274,7 +277,7 @@ void display_flight_mode() {
 }
 
 void send_msp_to_airunit() {
-  
+
   //MSP_FC_VARIANT
   memcpy(fc_variant.flightControlIdentifier, fcVariant, sizeof(fcVariant));
   msp.send(MSP_FC_VARIANT, &fc_variant, sizeof(fc_variant));
@@ -305,7 +308,7 @@ void send_msp_to_airunit() {
   battery_state.batteryState = 0;
   battery_state.legacyBatteryVoltage = vbat;
   msp.send(MSP_BATTERY_STATE, &battery_state, sizeof(battery_state));
- 
+
   //MSP_OSD_CONFIG
   send_osd_config();
 }
@@ -326,21 +329,18 @@ void set_battery_cells_number() {
 
 
 void getVoltageSample() {
-  vbat = analogRead(ANALOG_IN)*10/VOLT_DIVIDER;
+  vbat = map(analogRead(ANALOG_IN), 1475, 1893, 76, 92);
 }
 
 //*** USED ONLY FOR DEBUG ***
 void debugPrint() {
-  SerialUSB.println("**********************************");
-  SerialUSB.print("Flight Mode: ");
-  SerialUSB.println(flightModeFlags);
-  SerialUSB.print("Voltage: ");
-  SerialUSB.println(((double)vbat / 10), 1);
-  SerialUSB.print("Sample Count / transmit: ");
-  SerialUSB.println(lastCount);
-  SerialUSB.print("Battery Cell Count: ");
-  SerialUSB.println(batteryCellCount);
+  Serial.println("**********************************");
+  Serial.print("Flight Mode: ");
+  Serial.println(flightModeFlags);
+  Serial.print("Voltage: ");
+  Serial.println(((double)vbat / 10), 1);
+  Serial.print("Sample Count / transmit: ");
+  Serial.println(lastCount);
+  Serial.print("Battery Cell Count: ");
+  Serial.println(batteryCellCount);
 }
-
-
-
