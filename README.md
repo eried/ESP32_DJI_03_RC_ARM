@@ -31,13 +31,20 @@ The [source repo](https://github.com/ramiss/arduino_DJI_03_RC_ARM) has the wirin
 |-----|------|----------|-------|------|-------|
 |  VIN (before the switch, so it does not affect the camera) | GND | D17 | D16 | GND | D18 |
 
+> [!TIP]  
+> Since all cables are connected to the ESP32, if something does not work just modify the pins on `Serial1.begin(115200, SERIAL_8N1, 16, 18)`. If O3 is not detected then change the RX pin (16 in this case). If the O3 is detected but not ARMED, change the TX pin (18 in this case).
+
 ![image](https://github.com/user-attachments/assets/9ce7f696-b97e-4998-9752-6d0dc13da06f)
 
 The voltage divider can be configured in the code in the `map(input, 1475, 1893, 76, 92)`, it is a simplified version of the original, just with a range I am getting from `analogRead(ANALOG_IN)` to the real voltage multiplied for 10. In this example, when `analogRead(ANALOG_IN) == 1475` my multimeter was saying `7.6` volts (`76` in the `map` function).
 
 ## Aseembly
 
-For the "led indicators" I used some UV activated glue, to try to keep the water out. Those holes align only when the ESP32 was installed with the USB to the left as shown in the next photo. The device has three states of lights:
+The case has holes that align only when the ESP32 was installed with the USB to the left as shown in one of the photos below. 
+
+### Led indicator
+
+The device reports several states with the lights:
 
 State | Red | Blue
 --- | --- | ---
@@ -46,7 +53,9 @@ State | Red | Blue
  Initializing | ON | Very faint (5%)
  Waiting for O3 | ON | Faint (10%)
  ARMING | ON | ON
- 
+
+For the "led indicators" I used some UV activated glue, to try to keep the water out:
+
 ![image](https://github.com/user-attachments/assets/3ce6d0f7-11d1-4ce4-a453-e00443eb8e88)
 
 Besides this, I used double side tape for the ESP32, glue both cables to the bottom case and the switch in the upper position.
