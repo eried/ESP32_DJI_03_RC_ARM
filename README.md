@@ -10,7 +10,7 @@ There is some minor details mising, like the gopro mount. But that is a personal
 
 | Part        | Comments          |
 |-------------|----------------------|
-| [DJI o3 Air Unit](https://s.click.aliexpress.com/e/_DFMCnNp) | The camera
+| [DJI O3 Air Unit](https://s.click.aliexpress.com/e/_DFMCnNp) | The camera
 | [1800 mAh Original DJI Goggles 2 Battery](https://www.aliexpress.com/item/1005007042116539.html)      | Power bank|
 | [Alloy Waterproof Case](https://s.click.aliexpress.com/e/_DlB1UcT)      | Enclosure for camera|
 | [ESP32 30Pin-Type-C](https://s.click.aliexpress.com/e/_DmRukHz) | Microcontroller board, you have to desolder the pins |
@@ -23,6 +23,9 @@ There is some minor details mising, like the gopro mount. But that is a personal
 | Some translucent glue | For the "led indicators" |
 | 3d printer and PLA | For the enclosure |
 
+> [!TIP]  
+> To prevent fogging on the camera (O3 gets insanely hot when it is fully armed), DarwinFPV has some instructions of glueing the camera module to the case. I used foam double sided tape. Works OK
+
 ## Wiring
 
 The [source repo](https://github.com/ramiss/arduino_DJI_03_RC_ARM) has the wiring. From the DJI connector of the camera, I connected as follows:
@@ -31,7 +34,7 @@ The [source repo](https://github.com/ramiss/arduino_DJI_03_RC_ARM) has the wirin
 |-----|------|----------|-------|------|-------|
 |  VIN (before the switch, so it does not affect the camera) | GND | D17 | D16 | GND | D18 |
 
-> [!TIP]  
+> [!NOTE]  
 > Since all cables are connected to the ESP32, if something does not work just modify the pins on `Serial1.begin(115200, SERIAL_8N1, 16, 18)`. If O3 is not detected then change the RX pin (16 in this case). If the O3 is detected but not ARMED, change the TX pin (18 in this case).
 
 ![image](https://github.com/user-attachments/assets/9ce7f696-b97e-4998-9752-6d0dc13da06f)
